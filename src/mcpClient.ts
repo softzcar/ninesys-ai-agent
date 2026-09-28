@@ -19,7 +19,9 @@ export interface McpConfig {
 // El listado de tools es idéntico entre empresas (solo cambian los datos que
 // devuelven), así que se cachea por URL de MCP.
 const toolListCache = new Map<string, { tools: McpToolDef[]; fetchedAt: number }>();
-const TOOL_LIST_TTL_MS = 10 * 60 * 1000;
+// TTL corto: si se agregan tools nuevas al MCP, el agente las ve en <=1 min sin
+// necesidad de reiniciarlo. Listar tools es barato.
+const TOOL_LIST_TTL_MS = 60 * 1000;
 
 export class McpConnection {
   private client: Client;
