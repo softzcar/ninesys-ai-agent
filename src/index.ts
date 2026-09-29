@@ -6,6 +6,7 @@ export type {
   AgentConfig,
   ChatParams,
   ChatResult,
+  ChatImage,
   ChatTurn,
   ToolCallTrace,
 } from "./agent.js";

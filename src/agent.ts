@@ -37,10 +37,36 @@ export interface ToolCallTrace {
   isError: boolean;
 }
 
+export interface ChatImage {
+  url: string;
+  caption: string;
+}
+
 export interface ChatResult {
   text: string;
   toolCalls: ToolCallTrace[];
   steps: number;
+  // Imágenes a mostrar junto a la respuesta. Salen SOLO de structuredContent.images
+  // de las tools (datos reales), nunca del texto del modelo.
+  images: ChatImage[];
+}
+
+const MAX_IMAGES = 12;
+
+/** Extrae structuredContent.images = [{url, caption}] de un resultado de tool. */
+function extractImages(structured: Record<string, unknown> | null): ChatImage[] {
+  const raw = structured?.images;
+  if (!Array.isArray(raw)) return [];
+  const out: ChatImage[] = [];
+  for (const item of raw) {
+    if (item && typeof item === "object") {
+      const url = String((item as { url?: unknown }).url ?? "");
+      if (/^https:\/\//.test(url)) {
+        out.push({ url, caption: String((item as { caption?: unknown }).caption ?? "") });
+      }
+    }
+  }
+  return out;
 }
 
 export interface NinesysAgent {
@@ -88,6 +114,8 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
 
     const mcp = new McpConnection({ mcpUrl: config.mcpUrl, mcpToken: config.mcpToken, idEmpresa });
     const toolCalls: ToolCallTrace[] = [];
+    const images: ChatImage[] = [];
+    const seenImages = new Set<string>();
     try {
       const tools = await mcp.listTools();
       const toolNames = tools.map((t) => t.name);
@@ -111,7 +139,7 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
 
         const calls = response.functionCalls || [];
         if (!calls.length) {
-          return { text: (response.text || "").trim(), toolCalls, steps };
+          return { text: (response.text || "").trim(), toolCalls, steps, images };
         }
 
         // Turno del modelo: incluir las llamadas a función tal como las pidió.
@@ -142,6 +170,14 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
             try {
               const r = await mcp.callTool(resolved, args);
               text = r.text;
+              if (!r.isError) {
+                for (const img of extractImages(r.structured)) {
+                  if (images.length < MAX_IMAGES && !seenImages.has(img.url)) {
+                    seenImages.add(img.url);
+                    images.push(img);
+                  }
+                }
+              }
               isError = r.isError;
             } catch (e) {
               text = `Error ejecutando la herramienta: ${(e as Error).message}`;
@@ -161,6 +197,7 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
         text: "No pude completar la consulta en el número de pasos permitido. Intenta reformular.",
         toolCalls,
         steps,
+        images,
       };
     } finally {
       await mcp.close();

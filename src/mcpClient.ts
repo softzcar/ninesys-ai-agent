@@ -70,7 +70,10 @@ export class McpConnection {
    * (que es lo que se le devuelve a Gemini como functionResponse) y una bandera
    * isError. La empresa ya viaja en la cabecera de la conexión, no en args.
    */
-  async callTool(name: string, args: Record<string, unknown>): Promise<{ text: string; isError: boolean }> {
+  async callTool(
+    name: string,
+    args: Record<string, unknown>
+  ): Promise<{ text: string; isError: boolean; structured: Record<string, unknown> | null }> {
     await this.connect();
     const res = await withResilience("mcp", MCP_TIMEOUT_MS, () =>
       this.client.callTool({ name, arguments: args })
@@ -80,7 +83,11 @@ export class McpConnection {
       .filter((c: { type: string }) => c.type === "text")
       .map((c: { text?: string }) => c.text || "")
       .join("\n");
-    return { text, isError: res.isError === true };
+    const structured =
+      res.structuredContent && typeof res.structuredContent === "object"
+        ? (res.structuredContent as Record<string, unknown>)
+        : null;
+    return { text, isError: res.isError === true, structured };
   }
 
   async close(): Promise<void> {
