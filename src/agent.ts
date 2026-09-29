@@ -47,6 +47,20 @@ export interface NinesysAgent {
   chat(params: ChatParams): Promise<ChatResult>;
 }
 
+/**
+ * Gemini a veces llama las funciones recortando el prefijo (p.ej. "search_customers"
+ * en vez de "ninesys_search_customers"). Resuelve el nombre pedido contra las tools
+ * reales: exacto, luego con prefijo "ninesys_", luego coincidencia única por sufijo.
+ * Devuelve null si no hay una resolución inequívoca.
+ */
+function resolveToolName(requested: string, toolNames: string[]): string | null {
+  if (toolNames.includes(requested)) return requested;
+  const prefixed = `ninesys_${requested}`;
+  if (toolNames.includes(prefixed)) return prefixed;
+  const bySuffix = toolNames.filter((t) => t.endsWith(`_${requested}`));
+  return bySuffix.length === 1 ? bySuffix[0] : null;
+}
+
 function historyToContents(history: ChatTurn[]): Content[] {
   return history
     .filter((h) => h.text && h.text.trim())
@@ -76,6 +90,7 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
     const toolCalls: ToolCallTrace[] = [];
     try {
       const tools = await mcp.listTools();
+      const toolNames = tools.map((t) => t.name);
       const functionDeclarations = toGeminiFunctionDeclarations(tools);
 
       const contents: Content[] = [...historyToContents(history), { role: "user", parts: [{ text: query }] }];
@@ -108,19 +123,32 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
         // Ejecutar cada tool contra el MCP y devolver las respuestas.
         const responseParts = [];
         for (const call of calls) {
+          // `name` es el que pidió el modelo (se devuelve tal cual en functionResponse);
+          // `resolved` es el nombre real en el MCP.
           const name = call.name || "";
+          const resolved = resolveToolName(name, toolNames);
           const args = (call.args || {}) as Record<string, unknown>;
           let text = "";
           let isError = false;
-          try {
-            const r = await mcp.callTool(name, args);
-            text = r.text;
-            isError = r.isError;
-          } catch (e) {
-            text = `Error ejecutando la herramienta: ${(e as Error).message}`;
+          if (!resolved) {
+            text =
+              `La herramienta "${name}" no existe. Herramientas disponibles: ${toolNames.join(", ")}. ` +
+              `Vuelve a intentarlo usando el nombre exacto.`;
             isError = true;
+          } else {
+            if (resolved !== name) {
+              log.warn({ pedido: name, resuelto: resolved }, "nombre de tool corregido");
+            }
+            try {
+              const r = await mcp.callTool(resolved, args);
+              text = r.text;
+              isError = r.isError;
+            } catch (e) {
+              text = `Error ejecutando la herramienta: ${(e as Error).message}`;
+              isError = true;
+            }
           }
-          toolCalls.push({ name, args, isError });
+          toolCalls.push({ name: resolved || name, args, isError });
           responseParts.push({
             functionResponse: { name, response: { result: text, isError } },
           });
