@@ -79,9 +79,9 @@ async function main() {
     res.json({ status: "ok", service: "ninesys-ai-agent" });
   });
 
-  // POST /chat  { query, history?, id_empresa }
+  // POST /chat  { query, history?, id_empresa, systemPrompt? }
   app.post("/chat", requireBearer, async (req: Request, res: Response) => {
-    const { query, history, id_empresa } = req.body || {};
+    const { query, history, id_empresa, systemPrompt } = req.body || {};
     const idEmpresa = Number(id_empresa);
     if (!query || typeof query !== "string") {
       res.status(400).json({ error: "bad_request", message: "Falta 'query' (string)." });
@@ -96,6 +96,7 @@ async function main() {
         query,
         history: Array.isArray(history) ? history : [],
         idEmpresa,
+        systemPrompt: typeof systemPrompt === "string" && systemPrompt.trim() ? systemPrompt.trim() : undefined,
       });
       res.json({ success: true, ...result });
     } catch (e) {

@@ -103,7 +103,7 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
   const defaultSystemPrompt =
     config.systemPrompt ||
     process.env.AI_SYSTEM_PROMPT ||
-    "Eres el asistente de Ninesys. Usa las herramientas para obtener datos reales; si una herramienta no devuelve datos, dilo. Sé breve.";
+    "Eres el asistente interno de Ninesys para el personal de la empresa. Responde SIEMPRE con datos reales obtenidos mediante las herramientas disponibles (catálogo, órdenes, clientes, telas, tallas, horario, galería). Si el usuario pregunta por una orden, cliente o producto específico, o por sus observaciones, pagos o detalles, DEBES llamar a la herramienta correspondiente para consultar los datos en vivo, incluso si en turnos anteriores del historial no se encontró o se produjo un error, o si el usuario insiste. NUNCA asumas de memoria que algo no existe basándote solo en mensajes anteriores del historial. Si una herramienta no devuelve datos, dilo con claridad; no inventes. Sé breve, claro y en español.";
   const maxSteps = config.maxSteps || Number(process.env.AI_MAX_STEPS || 6);
   const ai = new GoogleGenAI({ apiKey: config.geminiApiKey });
 
