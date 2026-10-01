@@ -1,0 +1,21 @@
+- **Solicitud del Usuario:** Construir la pieza reutilizable que conecta el servidor MCP con Gemini (adaptador MCP → function-calling y bucle de tool-use) para que cualquier app del ecosistema tenga IA sobre los datos de Ninesys sin reimplementar el bucle, y desplegarla en Desarrollo.
+- **Fecha y Hora:** 2026-09-28 13:37 a 15:02 (rango de commits; script de despliegue commiteado el 2026-09-29 10:43)
+- **Proyecto(s):** ninesys-ai-agent (repo nuevo) + ninesys-hub (despliegue)
+- **Archivos Involucrados:** 
+  - `ninesys-ai-agent/src/{agent,mcpClient,geminiBridge,resilience,server,index}.ts`, `src/lib/logger.ts`
+  - `ninesys-ai-agent/package.json`, `ecosystem.config.cjs`, `tsconfig.json`
+  - `ninesys-hub/bin/deploy_agent_dev.sh`, `ninesys-hub/current_versions.json`
+- **Commits Relacionados:** 
+  - ninesys-ai-agent: `f93f985` (15 archivos, 3.764 líneas), `b5583a4`
+  - ninesys-hub: `150cf79` (script de despliegue y registro de versión)
+- **Acción Realizada:** Paquete Node/TypeScript con dos modos del mismo código: (1) librería `createNinesysAgent({mcpUrl, mcpToken, geminiApiKey, model, systemPrompt})` → `agent.chat({query, history, idEmpresa})` para apps Node como msg_ninesys; (2) servicio HTTP (`src/server.ts`): `POST /chat` con Bearer propio (`AGENT_CLIENT_TOKENS`) y CORS, body `{query, history, id_empresa}`, para SPAs sin backend como app_multi. Incluye cliente MCP (SDK oficial con StreamableHTTPClientTransport), conversión de las herramientas del MCP a `functionDeclarations` de Gemini (`@google/genai`), bucle de tool-use y resiliencia (reintentos y circuit breaker). Seguridad: dos fronteras de token (apps → agente con `AGENT_CLIENT_TOKENS`, agente → MCP con `MCP_TOKEN`) y la empresa viaja por conversación en la cabecera `X-Ninesys-Empresa`; el LLM nunca la maneja. Ajuste de caché el mismo día: TTL de la lista de herramientas de 10 min a 60 s para que una herramienta nueva del MCP sea visible en menos de un minuto. Publicado en GitHub (`softzcar/ninesys-ai-agent`, `main` + `v0.1.0`) y desplegado en Desarrollo como PM2 `ninesys-ai-agent` en `127.0.0.1:3200` (servicio local, sin subdominio público) con `deploy_agent_dev.sh`.
+- **Inconvenientes y Desafíos:** Antes de poder probar el modelo real hizo falta una `GEMINI_API_KEY` (se reutilizó la de msg_ninesys). Se eligió dejar el agente como servicio local y no exponer un subdominio.
+- **Decisión Final y Justificación:** Un solo paquete con dos modos para no repetir el bucle por app; el agente corre local y la API le hace de proxy autenticado (ver la tarea del proxy `/ai/chat`).
+- **Herramienta(s) Utilizada(s):** `git`, `npm`, `Write`/`Edit`, `ssh`, `curl`, `pm2`, `@google/genai`, `@modelcontextprotocol/sdk`
+- **Resultado:** Éxito.
+- **Verificación:** Local: conexión al MCP, `tools/list` (9 herramientas), conversión correcta a `functionDeclarations`, inyección de la empresa hacia la API y flujo del servicio `/chat` (health, 401, 400, conversación). En Desarrollo: `POST /ai/chat` por la API pública (empresa 208) devolvió datos reales de producto y telas.
+- **Logro Conseguido:** Capa estándar de IA lista y viva en Desarrollo; las apps nuevas la consumen sin reescribir el bucle de herramientas.
+- **Referencias de Sesión (Contexto):**
+  - Sesión Claude Code: https://claude.ai/code/session_01DGUJFb8c9NYbAFUZLRQfLE
+- **Observaciones de Gemini:** N/A (tarea ejecutada por Claude Code). Bitácora RECONSTRUIDA el 2026-10-01 a partir de los commits y las notas del proyecto, porque en su momento no se escribió.
+- **Respuesta de Gemini:** N/A.

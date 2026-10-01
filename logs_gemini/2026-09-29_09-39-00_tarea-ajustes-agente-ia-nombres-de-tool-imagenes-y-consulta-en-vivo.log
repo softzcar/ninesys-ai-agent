@@ -1,0 +1,20 @@
+- **Solicitud del Usuario:** Hacer más robusto el agente de IA a partir de las pruebas reales del chat: que no se rinda cuando el modelo escribe mal el nombre de una herramienta, que devuelva las imágenes que traen las herramientas y que consulte siempre en vivo las órdenes.
+- **Fecha y Hora:** 2026-09-29 09:39 a 14:31 (rango de commits)
+- **Proyecto(s):** ninesys-ai-agent + ninesys-hub
+- **Archivos Involucrados:** 
+  - `ninesys-ai-agent/src/agent.ts`, `src/mcpClient.ts`, `src/server.ts`
+  - `ninesys-hub/bin/deploy_agent_dev.sh`, `current_versions.json`
+- **Commits Relacionados:** 
+  - ninesys-ai-agent: `e951c72`, `ba14741`, `aecc851`
+  - ninesys-hub: `150cf79`
+- **Acción Realizada:** (1) Gemini a veces llamaba `search_customers` en vez de `ninesys_search_customers`; el MCP respondía "tool no existe" y el modelo se rendía. Ahora el agente resuelve el nombre (exacto, con prefijo `ninesys_` o por sufijo único) y, si no puede, devuelve al modelo la lista de herramientas válidas para que reintente. (2) `callTool` expone `structuredContent` y el agente junta `structuredContent.images` (solo https, sin duplicados, máximo 12) y las devuelve en `ChatResult.images`, para que el chat muestre imágenes de diseños y observaciones. (3) Se fuerza la consulta en vivo de órdenes y se ignora el sesgo de memoria del historial: el modelo repetía datos de órdenes de turnos anteriores en vez de volver a consultar. (4) Script de despliegue a Desarrollo `deploy_agent_dev.sh` y registro de `ninesys-ai-agent` en `current_versions.json`.
+- **Inconvenientes y Desafíos:** El fallo de nombres solo ocurría a veces (comportamiento del modelo), lo que lo hacía difícil de reproducir; se resolvió manejando la variante en el agente y no confiando en el prompt.
+- **Decisión Final y Justificación:** Tolerar la variación del modelo en el agente en lugar de endurecer el prompt, que es más frágil.
+- **Herramienta(s) Utilizada(s):** `git`, `npm`, `Write`/`Edit`, `ssh`, `curl`, `pm2`
+- **Resultado:** Éxito.
+- **Verificación:** Pruebas del chat en Desarrollo: la herramienta se resuelve aunque el modelo la nombre sin prefijo, el chat recibe imágenes, y las órdenes se consultan en vivo en cada pregunta.
+- **Logro Conseguido:** Agente de IA más confiable y con soporte de imágenes.
+- **Referencias de Sesión (Contexto):**
+  - Sesión Claude Code: https://claude.ai/code/session_01DGUJFb8c9NYbAFUZLRQfLE
+- **Observaciones de Gemini:** N/A (tarea ejecutada por Claude Code). Bitácora RECONSTRUIDA el 2026-10-01 a partir de los commits y las notas del proyecto, porque en su momento no se escribió.
+- **Respuesta de Gemini:** N/A.
