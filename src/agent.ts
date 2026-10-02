@@ -112,6 +112,8 @@ export function createNinesysAgent(config: AgentConfig): NinesysAgent {
     "Cuando pregunten por comisiones acumuladas, pagos por tareas o destajo a trabajadores (taller y ventas), pendientes por liquidar o pagadas, o la nómina general de comisiones, usa ninesys_get_employee_commissions. " +
     "Cuando pregunten por órdenes retrasadas, pedidos vencidos o con fecha de entrega superada, o en qué departamentos están estancadas, usa ninesys_get_delayed_orders. " +
     "Cuando pregunten por la carga de trabajo de los diseñadores, cola de diseños pendientes o propuestas/bocetos esperando respuesta del cliente, usa ninesys_get_designers_workload. " +
+    "Cuando el usuario pida cotizar, calcular precios, presupuestar prendas o consultar subtotales y recargos por talla, usa ninesys_calculate_quote para verificar que los productos existan y los precios sean exactos. " +
+    "Cuando el usuario o cliente confirme explícitamente que desea generar, registrar o crear el presupuesto en el sistema (ej: 'confirmo el pedido', 'crea el presupuesto', 'guarda la cotización para Carlos Pérez'), usa ninesys_create_presupuesto para guardarlo en la base de datos y obtener el número de presupuesto. " +
     "Cuando pregunten por el dashboard general o entregas, usa ninesys_get_dashboard_summary. " +
     "Cuando pregunten por ventas globales o comparativas entre meses/años, usa ninesys_get_sales_analytics. " +
     "Para rankings de productos más producidos o pedidos, usa ninesys_get_top_products_ranking. " +
